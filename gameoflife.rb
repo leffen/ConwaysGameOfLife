@@ -157,7 +157,6 @@ class GameOfLifeTest < Test::Unit::TestCase
 
 
   def test_find_new_cells
-    puts "test_find_new_cells"
     start = [[2,2],[2,3],[2,4]]
     game =Game.new(start)
     new_cells = game.find_new_cells
