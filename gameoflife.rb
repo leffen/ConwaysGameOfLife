@@ -8,72 +8,70 @@ require 'pp'
 
 class Game
   attr_accessor :grid
+  NEIGBOUR_COORDINATES=  [[-1,-1],[0,-1],[1,-1],
+                          [-1,0],        [1,0],
+                          [-1,1], [0,1], [1,1]]
 
-  def initialize(start_brett)
+  # alive_cells = array with alvie cells. Format = [[x,y],[x,y]]
+  def initialize(alive_cells)
+    init_grid(alive_cells)
+  end
+
+  def init_grid(alive_cells)
     @grid={}
-    start_brett.each{|e|@grid[e]=1}
+    alive_cells.each{|e|@grid[e]=1}
   end
 
-  def neigbour_cell_coordinates
-    [[-1,-1],[0,-1],[1,-1],
-     [-1,0],        [1,0],
-     [-1,1], [0,1], [1,1]]
+  def is_alive?(cell)
+    @grid.has_key?(cell)
   end
 
-  def is_alive?(celle)
-    @grid.has_key?(celle)
-  end
-
-  def neigbours(cell)
+  def neigbour_count(cell)
     cnt = 0
-    neigbour_cell_coordinates.each {|koordinates|
+    NEIGBOUR_COORDINATES.each {|koordinates|
       celle = [cell[0]+koordinates[0],cell[1]+koordinates[1]]
       cnt += is_alive?(celle) ? 1 :0
     }
     cnt
   end
 
+  # rules 1,2,3
   def find_surviviors
     @grid.each_with_object([]){ |cell,obj|
-      cnt = neigbours(cell[0])
+      cnt = neigbour_count(cell[0])
       obj << cell[0] if (cnt >1) and (cnt <4)
     }
   end
 
+  # rule 4
   def find_new_cells
     candidates ={}
 
     @grid.each_with_object([]){ |cell,obj|
-      neigbour_cell_coordinates.each {|koordinates|
-         celle = [cell[0][0]+koordinates[0],cell[0][1]+koordinates[1]]
-         candidates[celle] = neigbours(celle) if !candidates.has_key?(celle) && !@grid.has_key?(celle)
+      NEIGBOUR_COORDINATES.each {|koordinates|
+         potenintial_cell = [cell[0][0]+koordinates[0],cell[0][1]+koordinates[1]]
+         candidates[potenintial_cell] = neigbour_count(potenintial_cell) if !candidates.has_key?(potenintial_cell) && !@grid.has_key?(potenintial_cell)
       }
     }
     candidates.select{|k,v|v==3}.each_with_object([]){|element,obj|obj<<element[0]}
   end
 
+  # generate next "generation"
   def next_generation
-    surviors = find_surviviors
-    new_born = find_new_cells
-
-    surviors + new_born
+   find_surviviors + find_new_cells
   end
 
+  # advance to next level
   def tick
-
+    init_grid(next_generation)
   end
 
-  def find_grid_max
-    [0,0]
-    exit unless @grid.count >0
-
-    x_max = @grid.max_by{|k,e|k[0]}
-    y_max = @grid.max_by{|k,e|k[1]}
-    [x_max[0][0],y_max[0][1]]
+  def to_array
+    @grid.each_with_object([]){|element,obj|obj<<element[0]}.sort{|a,b|a[1]+a[0]/1000<=>b[1]+b[0]/1000}
   end
 
-
-  def skriv
+  # Simple print out of grid
+  def print_grid
     element = find_grid_max
 
     (1..element[1]+1).each{|y|
@@ -84,12 +82,25 @@ class Game
     }
   end
 
+  # Find the size of the current grid, [0,0] is assumed as starting point
+  def find_grid_max
+    [0,0]
+    exit unless @grid.count >0
+
+    x_max = @grid.max_by{|k,e|k[0]}
+    y_max = @grid.max_by{|k,e|k[1]}
+    [x_max[0][0],y_max[0][1]]
+  end
+
 end
 
 
 
 
 class GameOfLifeTest < Test::Unit::TestCase
+  TEST_OSICLLATOR = [[2,2],[2,3],[2,4]]
+  TEST_OSICLLATOR_G1 = [[1,3],[2,3],[3,3]]
+
 
   def setup
 
@@ -99,55 +110,33 @@ class GameOfLifeTest < Test::Unit::TestCase
     ## Nothing really
   end
 
-  def test_x
-    puts "test_next_generation"
+  def test_game_of_life_oscillator_1
+    game = Game.new(TEST_OSICLLATOR)
 
-    start = [[2,2],[2,3],[2,4]]
-    game = Game.new(start)
-    grid = game.next_generation
-    game.skriv
+    TEST_OSICLLATOR.each{|cell| assert_not_nil  game.is_alive?(cell) }
 
-    g2 = Game.new(grid)
-    g2.skriv
-
-
-  end
-
-  def test_tt
-    puts "tt"
-  end
-
-
-
-  def test_game_of_life
-    puts "test_game_of_life"
-    # Starter med enkel oscillator
-    start = [[2,2],[2,3],[2,4]]
-
-    game =Game.new(start)
-    start.each{|celle| assert_not_nil  game.is_alive?(celle) }
     assert_equal [2,4],game.find_grid_max
 
-    nextgen =  game.next_generation
-    pp nextgen
+    game.tick
+    game.print_grid
+    # assert_equal TEST_OSICLLATOR_G1,game.to_array
 
-
-
+    game.tick
+    game.print_grid
+    # assert_equal TEST_OSICLLATOR,game.to_array
   end
 
   def test_game_of_life_zero_elements
-    puts "test_game_of_life_zero_elements"
     game = Game.new([])
     assert(game.find_grid_max ===[0,0],"Bør nok returnere [0,0] og ikke #{game.find_grid_max}")
   end
 
   def test_check_neigbour
-    puts "test_check_neigbour"
     game = Game.new([[1,1],[3,4]])
 
-    assert_equal game.neigbours([1,1]),0
-    assert_equal game.neigbours([0,0]),1
-    assert_equal game.neigbours([10,10]),0
+    assert_equal game.neigbour_count([1,1]),0
+    assert_equal game.neigbour_count([0,0]),1
+    assert_equal game.neigbour_count([10,10]),0
 
     # todo: test all variations
 
@@ -155,7 +144,6 @@ class GameOfLifeTest < Test::Unit::TestCase
 
 
   def test_find_survivors
-    puts "test_find_survivors"
     # Starter med enkel oscillator
     start = [[2,2],[2,3],[2,4]]
     game =Game.new(start)
