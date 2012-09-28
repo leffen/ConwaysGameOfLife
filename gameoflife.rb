@@ -95,7 +95,7 @@ class Game
 end
 
 
-#TEST AV INNSJEKK
+#TEST AV INNSJEKK dsfgdsfgdsfgdfsg
 
 
 class GameOfLifeTest < Test::Unit::TestCase
